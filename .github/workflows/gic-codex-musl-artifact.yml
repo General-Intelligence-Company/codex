@@ -6,7 +6,7 @@ on:
       ref:
         description: Branch, tag, or SHA to build
         required: true
-        default: codex/remote-resume-path
+        default: main
 
 permissions:
   contents: read
