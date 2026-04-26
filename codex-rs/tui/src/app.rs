@@ -803,7 +803,11 @@ impl App {
             }
             SessionSelection::Resume(target_session) => {
                 let resumed = app_server
-                    .resume_thread(config.clone(), target_session.thread_id)
+                    .resume_thread(
+                        config.clone(),
+                        target_session.thread_id,
+                        target_session.path.clone(),
+                    )
                     .await
                     .wrap_err_with(|| {
                         let target_label = target_session.display_label();

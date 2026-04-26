@@ -375,6 +375,7 @@ impl AppServerSession {
         &mut self,
         config: Config,
         thread_id: ThreadId,
+        path: Option<PathBuf>,
     ) -> Result<AppServerStartedThread> {
         let request_id = self.next_request_id();
         let response: ThreadResumeResponse = self
@@ -384,6 +385,7 @@ impl AppServerSession {
                 params: thread_resume_params_from_config(
                     config.clone(),
                     thread_id,
+                    path,
                     self.thread_params_mode(),
                     self.remote_cwd_override.as_deref(),
                 ),
@@ -1164,6 +1166,7 @@ fn thread_start_params_from_config(
 fn thread_resume_params_from_config(
     config: Config,
     thread_id: ThreadId,
+    path: Option<PathBuf>,
     thread_params_mode: ThreadParamsMode,
     remote_cwd_override: Option<&std::path::Path>,
 ) -> ThreadResumeParams {
@@ -1174,6 +1177,7 @@ fn thread_resume_params_from_config(
         .flatten();
     ThreadResumeParams {
         thread_id: thread_id.to_string(),
+        path,
         model: config.model.clone(),
         model_provider: thread_params_mode.model_provider_from_config(&config),
         cwd: thread_cwd_from_config(&config, thread_params_mode, remote_cwd_override),
@@ -1534,6 +1538,7 @@ mod tests {
         let resume = thread_resume_params_from_config(
             config.clone(),
             thread_id,
+            None,
             ThreadParamsMode::Remote,
             /*remote_cwd_override*/ None,
         );
@@ -1576,6 +1581,7 @@ mod tests {
         let resume = thread_resume_params_from_config(
             config.clone(),
             thread_id,
+            None,
             ThreadParamsMode::Remote,
             Some(remote_cwd.as_path()),
         );
@@ -1598,6 +1604,24 @@ mod tests {
         assert_eq!(start.permission_profile, None);
         assert_eq!(resume.permission_profile, None);
         assert_eq!(fork.permission_profile, None);
+    }
+
+    #[tokio::test]
+    async fn thread_resume_params_forward_rollout_path() {
+        let temp_dir = tempfile::tempdir().expect("tempdir");
+        let config = build_config(&temp_dir).await;
+        let thread_id = ThreadId::new();
+        let path = PathBuf::from("/home/user/.codex/sessions/rollout.jsonl");
+
+        let params = thread_resume_params_from_config(
+            config,
+            thread_id,
+            Some(path.clone()),
+            ThreadParamsMode::Remote,
+            /*remote_cwd_override*/ None,
+        );
+
+        assert_eq!(params.path, Some(path));
     }
 
     #[test]
