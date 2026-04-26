@@ -1755,6 +1755,7 @@ mod tests {
     use codex_app_server_protocol::RequestId;
     use codex_app_server_protocol::ThreadStartParams;
     use codex_app_server_protocol::ThreadStartResponse;
+    use codex_app_server_protocol::ThreadStatus;
     use codex_config::config_toml::ProjectConfig;
     use codex_features::Feature;
     use codex_protocol::protocol::AskForApproval;
@@ -1764,6 +1765,8 @@ mod tests {
     use codex_protocol::protocol::SessionMetaLine;
     use codex_protocol::protocol::SessionSource;
     use codex_protocol::protocol::TurnContextItem;
+    use codex_utils_absolute_path::test_support::PathBufExt;
+    use codex_utils_absolute_path::test_support::test_path_buf;
     use pretty_assertions::assert_eq;
     use serial_test::serial;
     use tempfile::TempDir;
@@ -1800,6 +1803,37 @@ mod tests {
         };
 
         assert_eq!(target.display_label(), format!("thread {thread_id}"));
+    }
+
+    #[test]
+    fn app_server_thread_session_target_preserves_rollout_path() {
+        let thread_id = ThreadId::new();
+        let rollout_path = PathBuf::from(
+            "/home/user/.codex/sessions/2026/04/26/rollout-2026-04-26T01-45-07.jsonl",
+        );
+        let target = session_target_from_app_server_thread(AppServerThread {
+            id: thread_id.to_string(),
+            forked_from_id: None,
+            preview: "remote thread".to_string(),
+            ephemeral: false,
+            model_provider: "openai".to_string(),
+            created_at: 1,
+            updated_at: 2,
+            status: ThreadStatus::Idle,
+            path: Some(rollout_path.clone()),
+            cwd: test_path_buf("/workspace/repo").abs(),
+            cli_version: "0.0.0".to_string(),
+            source: SessionSource::Cli.into(),
+            agent_nickname: None,
+            agent_role: None,
+            git_info: None,
+            name: None,
+            turns: Vec::new(),
+        })
+        .expect("valid app-server thread should convert to a session target");
+
+        assert_eq!(target.thread_id, thread_id);
+        assert_eq!(target.path, Some(rollout_path));
     }
 
     #[test]
