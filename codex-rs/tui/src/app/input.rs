@@ -121,6 +121,20 @@ impl App {
         {
             return;
         }
+        if self.overlay.is_none()
+            && self.chat_widget.no_modal_or_popup_active()
+            && self.chat_widget.composer_is_empty()
+            && matches!(key_event.code, KeyCode::PageUp | KeyCode::PageDown)
+            && matches!(key_event.kind, KeyEventKind::Press | KeyEventKind::Repeat)
+        {
+            self.open_transcript_overlay(tui);
+            if let Some(overlay) = &mut self.overlay
+                && let Err(err) = overlay.handle_event(tui, TuiEvent::Key(key_event))
+            {
+                tracing::warn!(error = %err, "failed to handle transcript page key");
+            }
+            return;
+        }
 
         match key_event {
             KeyEvent {
